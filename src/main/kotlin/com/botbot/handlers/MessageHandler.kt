@@ -3,12 +3,18 @@ package com.botbot.handlers
 import com.botbot.MessageDatabase
 import com.github.kotlintelegrambot.entities.Message
 import java.io.File
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: List<Long>) {
     val chat = message.chat
     val chatId = chat.id
     val chatTitle = chat.title
+
+    // Always save the user, regardless of the chat.
+    message.from?.let { user ->
+        database.saveUser(user.id, user.firstName)
+    }
 
     // If chat is monitored, save the message
     if (chatId in monitoredChats) {
@@ -37,9 +43,12 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
             if (!hasBeenLogged) {
                 // For private chats, the title is the user's name.
                 val effectiveTitle = chatTitle ?: "Private Chat with ${message.from?.firstName ?: "user"}"
+                
+                // Use modern java.time for accurate, timezone-aware timestamps.
+                val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
                 // Log to file for persistence
-                logFile.appendText("$chatId|$effectiveTitle|${Date()}\n")
+                logFile.appendText("$chatId|$effectiveTitle|$timestamp\n")
 
                 // Log to console to make it visible
                 println("\n🎯 New unmonitored chat detected:")

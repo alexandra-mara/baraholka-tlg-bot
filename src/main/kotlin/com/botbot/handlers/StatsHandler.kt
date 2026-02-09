@@ -17,6 +17,7 @@ fun handleStats(bot: Bot, message: Message, database: MessageDatabase, monitored
         📊 *Listing database statistics:*
         
         💬 Messages: *${stats.totalMessages}*
+        👥 Users: *${stats.totalUsers}*
         📁 Chats: *${stats.totalChats}*
         
         📅 Oldest: ${

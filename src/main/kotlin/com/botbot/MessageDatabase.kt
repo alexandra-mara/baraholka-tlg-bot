@@ -16,7 +16,7 @@ class MessageDatabase {
     }
 
     private fun createTables() {
-        val createTableSQL = """
+        val createMessagesTableSQL = """
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id BIGINT NOT NULL,
@@ -31,13 +31,22 @@ class MessageDatabase {
             )
         """
 
+        val createUsersTableSQL = """
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                user_name TEXT,
+                first_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+
         val createIndexSQL = """
             CREATE INDEX IF NOT EXISTS idx_search 
             ON messages(message_text, timestamp)
         """
 
         connection.createStatement().use { stmt ->
-            stmt.execute(createTableSQL)
+            stmt.execute(createMessagesTableSQL)
+            stmt.execute(createUsersTableSQL)
             stmt.execute(createIndexSQL)
         }
     }
@@ -70,6 +79,19 @@ class MessageDatabase {
             }
         } catch (e: SQLException) {
             println("⚠️ Ошибка сохранения сообщения: ${e.message}")
+        }
+    }
+
+    fun saveUser(userId: Long, userName: String?) {
+        val sql = "INSERT OR IGNORE INTO users (user_id, user_name) VALUES (?, ?)"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setLong(1, userId)
+                pstmt.setString(2, userName ?: "")
+                pstmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Ошибка сохранения пользователя: ${e.message}")
         }
     }
 
@@ -134,7 +156,7 @@ class MessageDatabase {
 }
 
     fun getStats(): DatabaseStats {
-        val sql = """
+        val messageStatsSql = """
             SELECT 
                 COUNT(*) as total_messages,
                 COUNT(DISTINCT chat_id) as total_chats,
@@ -142,9 +164,12 @@ class MessageDatabase {
                 MAX(timestamp) as newest_message
             FROM messages
         """
+        val userStatsSql = "SELECT COUNT(*) as total_users FROM users"
 
-        return connection.createStatement().use { stmt ->
-            stmt.executeQuery(sql).use { rs ->
+        var stats = DatabaseStats()
+
+        connection.createStatement().use { stmt ->
+            stmt.executeQuery(messageStatsSql).use { rs ->
                 if (rs.next()) {
                     val oldestTimestamp = rs.getLong("oldest_message")
                     val oldestWasNull = rs.wasNull()
@@ -154,17 +179,21 @@ class MessageDatabase {
                     val oldestDateTime = if (oldestWasNull) null else LocalDateTime.ofInstant(Instant.ofEpochSecond(oldestTimestamp), ZoneId.systemDefault())
                     val newestDateTime = if (newestWasNull) null else LocalDateTime.ofInstant(Instant.ofEpochSecond(newestTimestamp), ZoneId.systemDefault())
 
-                    DatabaseStats(
+                    stats = stats.copy(
                         totalMessages = rs.getInt("total_messages"),
                         totalChats = rs.getInt("total_chats"),
                         oldestMessage = oldestDateTime,
                         newestMessage = newestDateTime
                     )
-                } else {
-                    DatabaseStats()
+                }
+            }
+            stmt.executeQuery(userStatsSql).use { rs ->
+                if (rs.next()) {
+                    stats = stats.copy(totalUsers = rs.getInt("total_users"))
                 }
             }
         }
+        return stats
     }
 
     fun close() {
@@ -184,6 +213,7 @@ data class SearchResult(
 data class DatabaseStats(
     val totalMessages: Int = 0,
     val totalChats: Int = 0,
+    val totalUsers: Int = 0,
     val oldestMessage: LocalDateTime? = null,
     val newestMessage: LocalDateTime? = null
 )

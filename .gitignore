@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# Gradle
+.gradle
+build/
+
+# IDE files
+.idea/
+*.iml
+
+# Log files
+*.log
+
+# Databases
+*.db
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+local.properties
