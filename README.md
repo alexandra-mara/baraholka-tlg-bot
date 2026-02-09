@@ -28,11 +28,14 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
     ```
 
 2.  **Configure the Bot Token:**
-    Create a file named `.env` in the root of the project and add your Telegram bot token:
+    Run the `start.sh` script. It will automatically create a `.env` file for you if it doesn't exist.
+    ```bash
+    ./start.sh
+    ```
+    Then, open the `.env` file and add your Telegram bot token:
     ```
     TELEGRAM_BOT_TOKEN=your_token_here
     ```
-    Alternatively, you can set `TELEGRAM_BOT_TOKEN` as an environment variable.
 
 3.  **Configure Monitored Chats:**
     Open `src/main/kotlin/com/botbot/config/Config.kt` and add the chat IDs you want the bot to monitor to the `MONITORED_CHATS` list. For example:
@@ -46,13 +49,20 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 
 ### Running the Bot
 
-Use the included Gradle wrapper to build and run the application:
+Make the `start.sh` script executable and then run it:
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+The bot will start polling for updates.
+
+Alternatively, you can run the bot directly with Gradle:
 
 ```bash
 ./gradlew run
 ```
-
-The bot will start polling for updates.
 
 ## Usage
 
