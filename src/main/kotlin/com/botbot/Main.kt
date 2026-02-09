@@ -1,6 +1,7 @@
 package com.botbot
 
 import com.botbot.config.Config
+import com.botbot.db.MessageDatabase
 import com.botbot.handlers.handleChatId
 import com.botbot.handlers.handleHelp
 import com.botbot.handlers.handleMessage

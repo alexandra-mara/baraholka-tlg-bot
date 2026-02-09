@@ -1,6 +1,6 @@
 package com.botbot.handlers
 
-import com.botbot.MessageDatabase
+import com.botbot.db.MessageDatabase
 import com.github.kotlintelegrambot.entities.Message
 import java.io.File
 import java.time.LocalDateTime

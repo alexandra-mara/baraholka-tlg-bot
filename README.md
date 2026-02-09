@@ -1,13 +1,14 @@
 # Telegram Message Saver & Search Bot
 
-A Kotlin-based Telegram bot designed to automatically save messages from specific group chats, supergroups, and channels into a local SQLite database. It provides a powerful search functionality to find messages across all monitored chats.
+A Kotlin-based Telegram bot designed to automatically save messages from specific group chats, supergroups, and channels into a local SQLite database. It provides a powerful search functionality and user tracking.
 
 ## Features
 
 - **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database (`messages_v2.db`).
 - **Advanced Search**: The `/search` command supports finding all word forms of a query (e.g., searching for 'run' will also find 'ran' and 'running').
 - **Unique Results**: The search functionality returns only the latest unique message based on its content, avoiding duplicates.
-- **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, total chats, and the date range of stored messages.
+- **User Tracking**: Counts the number of unique users who have interacted with the bot.
+- **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, total users, and total chats.
 - **Chat ID Discovery**: Includes a `/chatid` command and a silent detection feature to easily find the IDs of new or unmonitored chats.
 - **Secure Configuration**: Bot token is managed securely via an environment variable or a local `.env` file.
 - **Modern Tech Stack**: Built with Kotlin, Coroutines, and Gradle.
@@ -37,7 +38,17 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
     TELEGRAM_BOT_TOKEN=your_token_here
     ```
 
-3.  **Configure Monitored Chats:**
+3.  **Important: Disable Group Privacy Mode**
+    For the bot to receive all messages in a group chat, you **must** disable its privacy mode.
+
+    1.  Open a chat with **[@BotFather](https://t.me/BotFather)** on Telegram.
+    2.  Send the `/setprivacy` command.
+    3.  Select your bot from the list.
+    4.  Choose the **"Disable"** option.
+
+    If you skip this step, the bot will **not** see regular messages in groups and will not save them to the database. Alternatively, making the bot an administrator of the group also works.
+
+4.  **Configure Monitored Chats:**
     Open `src/main/kotlin/com/botbot/config/Config.kt` and add the chat IDs you want the bot to monitor to the `MONITORED_CHATS` list. For example:
     ```kotlin
     val MONITORED_CHATS: List<Long> = listOf(
@@ -70,7 +81,7 @@ Alternatively, you can run the bot directly with Gradle:
 - `/stop`: Stops the bot.
 - `/help`: Displays a list of available commands and examples.
 - `/search <query>`: Searches the database for messages. The search is case-insensitive and matches all word forms.
-- `/stats`: Shows statistics about the messages stored in the database.
+- `/stats`: Shows statistics about the messages, users, and chats stored in the database.
 - `/chatid`: Responds with the unique ID of the current chat.
 
 ### Silent Chat ID Detection

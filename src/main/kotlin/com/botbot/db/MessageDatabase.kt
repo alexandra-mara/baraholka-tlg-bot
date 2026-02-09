@@ -1,4 +1,4 @@
-package com.botbot
+package com.botbot.db
 
 import java.sql.*
 import java.time.LocalDateTime

@@ -1,7 +1,7 @@
 package com.botbot.handlers
 
-import com.botbot.MessageDatabase
-import com.botbot.getWordForms
+import com.botbot.db.MessageDatabase
+import com.botbot.services.getWordForms
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message

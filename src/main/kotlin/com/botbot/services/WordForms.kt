@@ -1,4 +1,4 @@
-package com.botbot
+package com.botbot.services
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
