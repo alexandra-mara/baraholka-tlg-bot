@@ -27,7 +27,7 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
     } else {
         // Otherwise, this is an unmonitored chat.
         // Log its ID to the console and a file, but only once.
-        if (chat.type == "supergroup" || chat.type == "group" || chat.type == "private") {
+        if (chat.type == "supergroup" || chat.type == "group" || chat.type == "private" || chat.type == "channel") {
             val logFile = File("chat_ids.log")
             val logFileContent = if (logFile.exists()) logFile.readText() else ""
 

@@ -11,9 +11,7 @@ fun handleHelp(bot: Bot, message: Message) {
 
         `/start` - Start interacting with the bot
         `/stop` - Stop the current session
-        `/hi` - Say hello to the bot
         `/help` - Show this message
-        `/echo [text]` - Repeat your text
         `/search [query]` - search for listings
         `/stats` - database statistics
         
