@@ -14,7 +14,7 @@ fun handleEcho(bot: Bot, message: Message, args: List<String>) {
     } else {
         bot.sendMessage(
             chatId = ChatId.fromId(message.chat.id),
-            text = "Напиши: /echo [ваш текст]"
+            text = "Type: /echo [your text]"
         )
     }
 }

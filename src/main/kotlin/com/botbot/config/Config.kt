@@ -7,6 +7,12 @@ object Config {
         readToken()
     }
 
+    val MONITORED_CHATS: List<Long> = listOf(
+        // Insert your chat_id after receiving it
+        // -1001234567890L, // CYPRUS 🇨🇾 FLEA MARKET
+        // -1009876543210L  // CypRusSale
+    )
+
     private fun readToken(): String {
         // 1. Try from environment variables
         val fromEnv = System.getenv("TELEGRAM_BOT_TOKEN")

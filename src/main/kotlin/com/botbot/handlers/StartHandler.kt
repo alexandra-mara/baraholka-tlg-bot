@@ -7,6 +7,6 @@ import com.github.kotlintelegrambot.entities.Message
 fun handleStart(bot: Bot, message: Message) {
     bot.sendMessage(
         chatId = ChatId.fromId(message.chat.id),
-        text = "Привет, ${message.from?.firstName}!"
+        text = "Hello, ${message.from?.firstName}!"
     )
 }
