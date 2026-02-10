@@ -69,7 +69,7 @@ class MessageDatabase {
         timestamp: Long // Unix timestamp from Telegram
     ) {
         val sql = """
-            INSERT OR IGNORE INTO messages 
+            INSERT OR REPLACE INTO messages
             (chat_id, chat_title, chat_username, message_id, message_text, sender_name, sender_id, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
