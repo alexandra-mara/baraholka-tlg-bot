@@ -9,7 +9,8 @@ object Config {
 
     val MONITORED_CHATS: List<Long> = listOf(
         // Insert your chat_id after receiving it
-         -1002054147029L, // Кипр Барахолка
+        -1002054147029L, // Кипр Барахолка
+        -5125593588L, // private chat
     )
 
     private fun readToken(): String {

@@ -10,23 +10,35 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
     val chat = message.chat
     val chatId = chat.id
     val chatTitle = chat.title
+    val chatUsername = chat.username
+    val user = message.from
+    val userId = user?.id
+    val userName = user?.firstName
+    val messageId = message.messageId
+    val text = message.text ?: message.caption ?: "[Non-text message]"
+
+    // --- Comprehensive Logging for ALL Messages ---
+    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    val logMessage = "[$timestamp] Chat:$chatId($chatTitle) | Msg:$messageId | User:$userId($userName) | Text: $text"
+
+    println(logMessage) // Log every message to the console
+    File("full_activity.log").appendText("$logMessage\n") // Log every message to a file
+    // ----------------------------------------------
 
     // Always save the user, regardless of the chat.
-    message.from?.let { user ->
-        database.saveUser(user.id, user.firstName)
-    }
+    user?.let { database.saveUser(it.id, it.firstName) }
 
-    // If chat is monitored, save the message
+    // If chat is monitored, save the message to the database
     if (chatId in monitoredChats) {
-        val text = message.text ?: message.caption ?: ""
         if (text.isNotBlank()) {
             database.saveMessage(
                 chatId = chatId,
                 chatTitle = chatTitle,
+                chatUsername = chatUsername,
                 messageId = message.messageId,
                 text = text,
-                senderName = message.from?.firstName,
-                senderId = message.from?.id,
+                senderName = userName,
+                senderId = userId,
                 timestamp = message.date
             )
         }
@@ -37,21 +49,15 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
             val logFile = File("chat_ids.log")
             val logFileContent = if (logFile.exists()) logFile.readText() else ""
 
-            // Check if we've already logged this chat ID to avoid spamming the log.
             val hasBeenLogged = logFileContent.lines().any { it.startsWith("$chatId|") }
 
             if (!hasBeenLogged) {
-                // For private chats, the title is the user's name.
-                val effectiveTitle = chatTitle ?: "Private Chat with ${message.from?.firstName ?: "user"}"
-                
-                // Use modern java.time for accurate, timezone-aware timestamps.
-                val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val effectiveTitle = chatTitle ?: "Private Chat with ${user?.firstName ?: "user"}"
+                val logTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
-                // Log to file for persistence
-                logFile.appendText("$chatId|$effectiveTitle|$timestamp\n")
+                logFile.appendText("$chatId|$effectiveTitle|$logTimestamp\n")
 
-                // Log to console to make it visible
-                println("\n🎯 New unmonitored chat detected:")
+                println("\n🎯 New unmonitored chat detected (logging to chat_ids.log):")
                 println("   Type: ${chat.type}")
                 println("   Title: $effectiveTitle")
                 println("   ID: $chatId")

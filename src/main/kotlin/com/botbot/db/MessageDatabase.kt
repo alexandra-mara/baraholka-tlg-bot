@@ -5,14 +5,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.Instant
 
-class MessageDatabase {
+class MessageDatabase() {
     private var connection: Connection
 
     init {
         // Создаём или подключаемся к базе
-        connection = DriverManager.getConnection("jdbc:sqlite:messages_v2.db")
+        connection = DriverManager.getConnection("jdbc:sqlite:messages_v3.db")
         createTables()
-        println("✅ База данных подключена: messages_v2.db")
+        println("✅ База данных подключена: messages_v3.db")
     }
 
     private fun createTables() {
@@ -21,6 +21,7 @@ class MessageDatabase {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id BIGINT NOT NULL,
                 chat_title TEXT,
+                chat_username TEXT, -- For public chat links
                 message_id BIGINT NOT NULL,
                 message_text TEXT NOT NULL,
                 sender_name TEXT,
@@ -54,6 +55,7 @@ class MessageDatabase {
     fun saveMessage(
         chatId: Long,
         chatTitle: String?,
+        chatUsername: String?,
         messageId: Long,
         text: String,
         senderName: String?,
@@ -62,19 +64,20 @@ class MessageDatabase {
     ) {
         val sql = """
             INSERT OR IGNORE INTO messages 
-            (chat_id, chat_title, message_id, message_text, sender_name, sender_id, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (chat_id, chat_title, chat_username, message_id, message_text, sender_name, sender_id, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         try {
             connection.prepareStatement(sql).use { pstmt ->
                 pstmt.setLong(1, chatId)
                 pstmt.setString(2, chatTitle)
-                pstmt.setLong(3, messageId)
-                pstmt.setString(4, text)
-                pstmt.setString(5, senderName)
-                senderId?.let { pstmt.setLong(6, it) } ?: pstmt.setNull(6, Types.BIGINT)
-                pstmt.setLong(7, timestamp)
+                pstmt.setString(3, chatUsername)
+                pstmt.setLong(4, messageId)
+                pstmt.setString(5, text)
+                pstmt.setString(6, senderName)
+                senderId?.let { pstmt.setLong(7, it) } ?: pstmt.setNull(7, Types.BIGINT)
+                pstmt.setLong(8, timestamp)
                 pstmt.executeUpdate()
             }
         } catch (e: SQLException) {
@@ -95,6 +98,22 @@ class MessageDatabase {
         }
     }
 
+    fun getAllUsers(): List<User> {
+        val sql = "SELECT user_id, user_name FROM users ORDER BY first_seen_at DESC"
+        return connection.createStatement().use { stmt ->
+            stmt.executeQuery(sql).use { rs ->
+                val users = mutableListOf<User>()
+                while (rs.next()) {
+                    users.add(User(
+                        id = rs.getLong("user_id"),
+                        name = rs.getString("user_name")
+                    ))
+                }
+                users
+            }
+        }
+    }
+
     fun searchMessages(
     query: List<String>,
     chatIds: List<Long>? = null,
@@ -106,7 +125,7 @@ class MessageDatabase {
     val timeBoundary = Instant.now().minus(daysBack.toLong(), java.time.temporal.ChronoUnit.DAYS).epochSecond
     val wordFormsWhere = query.joinToString(separator = " OR ") { "message_text LIKE ?" }
     val chatIdsWhere = if (chatIds != null && chatIds.isNotEmpty()) {
-        "AND chat_id IN (${chatIds.map { "?" }.joinToString()})"
+        "AND m.chat_id IN (${chatIds.map { "?" }.joinToString()})"
     } else ""
 
     val sql = """
@@ -114,12 +133,13 @@ class MessageDatabase {
             SELECT
                 chat_id,
                 chat_title,
+                chat_username,
                 message_id,
                 message_text,
                 sender_name,
                 timestamp,
                 ROW_NUMBER() OVER(PARTITION BY message_text ORDER BY timestamp DESC) as rn
-            FROM messages
+            FROM messages m
             WHERE ($wordFormsWhere)
             AND timestamp >= ?
             $chatIdsWhere
@@ -144,6 +164,7 @@ class MessageDatabase {
                 results.add(SearchResult(
                     chatId = rs.getLong("chat_id"),
                     chatTitle = rs.getString("chat_title"),
+                    chatUsername = rs.getString("chat_username"),
                     messageId = rs.getLong("message_id"),
                     text = rs.getString("message_text"),
                     senderName = rs.getString("sender_name"),
@@ -154,6 +175,44 @@ class MessageDatabase {
         }
     }
 }
+
+    fun showLastMessages(limit: Int = 10): List<SearchResult> {
+        val sql = """
+            SELECT
+                chat_id,
+                chat_title,
+                chat_username,
+                message_id,
+                message_text,
+                sender_name,
+                timestamp
+            FROM messages
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """
+
+        return connection.prepareStatement(sql).use { pstmt ->
+            pstmt.setInt(1, limit)
+
+            pstmt.executeQuery().use { rs ->
+                val results = mutableListOf<SearchResult>()
+                while (rs.next()) {
+                    val timestamp = rs.getLong("timestamp")
+                    val dateTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp), ZoneId.systemDefault())
+                    results.add(SearchResult(
+                        chatId = rs.getLong("chat_id"),
+                        chatTitle = rs.getString("chat_title"),
+                        chatUsername = rs.getString("chat_username"),
+                        messageId = rs.getLong("message_id"),
+                        text = rs.getString("message_text"),
+                        senderName = rs.getString("sender_name"),
+                        timestamp = dateTime
+                    ))
+                }
+                results
+            }
+        }
+    }
 
     fun getStats(): DatabaseStats {
         val messageStatsSql = """
@@ -204,6 +263,7 @@ class MessageDatabase {
 data class SearchResult(
     val chatId: Long,
     val chatTitle: String,
+    val chatUsername: String?,
     val messageId: Long,
     val text: String,
     val senderName: String?,
@@ -216,4 +276,9 @@ data class DatabaseStats(
     val totalUsers: Int = 0,
     val oldestMessage: LocalDateTime? = null,
     val newestMessage: LocalDateTime? = null
+)
+
+data class User(
+    val id: Long,
+    val name: String
 )

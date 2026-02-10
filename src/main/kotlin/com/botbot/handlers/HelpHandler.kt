@@ -14,6 +14,8 @@ fun handleHelp(bot: Bot, message: Message) {
         `/help` - Show this message
         `/search [query]` - search for listings
         `/stats` - database statistics
+        `/show [count]` - show the last messages (default: 10)
+        `/users` - ⚠️ (Admin/Debug) List all tracked users.
         
          *Examples:*
                     /search tent
