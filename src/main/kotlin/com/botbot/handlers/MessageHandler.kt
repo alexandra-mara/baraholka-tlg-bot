@@ -18,14 +18,15 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
     val text = message.text ?: message.caption ?: "[Non-text message]"
 
     // --- Comprehensive Logging for ALL Messages ---
+    val forwardedFrom = message.forwardFrom?.let { " | Forwarded from: ${it.firstName}" } ?: ""
     val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-    val logMessage = "[$timestamp] Chat:$chatId($chatTitle) | Msg:$messageId | User:$userId($userName) | Text: $text"
+    val logMessage = "[$timestamp] Chat:$chatId($chatTitle) | Msg:$messageId | User:$userId($userName)$forwardedFrom | Text: $text"
 
-    println(logMessage) // Log every message to the console
-    File("full_activity.log").appendText("$logMessage\n") // Log every message to a file
+    println(logMessage)
+    File("full_activity.log").appendText("$logMessage\n")
     // ----------------------------------------------
 
-    // Always save the user, regardless of the chat.
+    // Only save the user who sent the message in this chat.
     user?.let { database.saveUser(it.id, it.firstName) }
 
     // If chat is monitored, save the message to the database
@@ -39,11 +40,13 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
                 text = text,
                 senderName = userName,
                 senderId = userId,
+                forwardedFromId = message.forwardFrom?.id,
+                forwardedFromName = message.forwardFrom?.firstName,
                 timestamp = message.date
             )
         }
     } else {
-        // Otherwise, this is an unmonitored chat.
+        // This is an unmonitored chat.
         // Log its ID to the console and a file, but only once.
         if (chat.type == "supergroup" || chat.type == "group" || chat.type == "private" || chat.type == "channel") {
             val logFile = File("chat_ids.log")

@@ -16,9 +16,9 @@ class MessageDatabase {
 
     init {
         // Create or connect to the database
-        connection = DriverManager.getConnection("jdbc:sqlite:messages.db")
+        connection = DriverManager.getConnection("jdbc:sqlite:messages_v4.db")
         createTables()
-        println("✅ Database connected: messages.db")
+        println("✅ Database connected: messages_v4.db")
     }
 
     private fun createTables() {
@@ -27,11 +27,13 @@ class MessageDatabase {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id BIGINT NOT NULL,
                 chat_title TEXT,
-                chat_username TEXT, -- For public chat links
+                chat_username TEXT, 
                 message_id BIGINT NOT NULL,
                 message_text TEXT NOT NULL,
                 sender_name TEXT,
                 sender_id BIGINT,
+                forwarded_from_id BIGINT,
+                forwarded_from_name TEXT,
                 timestamp BIGINT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(chat_id, message_id)
@@ -66,12 +68,14 @@ class MessageDatabase {
         text: String,
         senderName: String?,
         senderId: Long?,
+        forwardedFromId: Long?,
+        forwardedFromName: String?,
         timestamp: Long // Unix timestamp from Telegram
     ) {
         val sql = """
-            INSERT OR REPLACE INTO messages
-            (chat_id, chat_title, chat_username, message_id, message_text, sender_name, sender_id, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO messages 
+            (chat_id, chat_title, chat_username, message_id, message_text, sender_name, sender_id, forwarded_from_id, forwarded_from_name, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         try {
@@ -83,7 +87,9 @@ class MessageDatabase {
                 pstmt.setString(5, text)
                 pstmt.setString(6, senderName)
                 senderId?.let { pstmt.setLong(7, it) } ?: pstmt.setNull(7, Types.BIGINT)
-                pstmt.setLong(8, timestamp)
+                forwardedFromId?.let { pstmt.setLong(8, it) } ?: pstmt.setNull(8, Types.BIGINT)
+                pstmt.setString(9, forwardedFromName)
+                pstmt.setLong(10, timestamp)
                 pstmt.executeUpdate()
             }
         } catch (e: SQLException) {

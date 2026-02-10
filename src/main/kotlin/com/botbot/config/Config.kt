@@ -11,6 +11,7 @@ object Config {
         // Insert your chat_id after receiving it
         -1002054147029L, // Кипр Барахолка
         -5125593588L, // private chat
+        -1003686731181, // public chat
     )
 
     private fun readToken(): String {
