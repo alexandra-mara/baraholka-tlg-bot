@@ -12,6 +12,11 @@ suspend fun handleWordForms(bot: Bot, message: Message, args: List<String>) {
         return
     }
 
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = "🔎 Searching for word forms of \"$word\"..."
+    )
+
     val wordForms = getWordForms(word)
 
     bot.sendMessage(

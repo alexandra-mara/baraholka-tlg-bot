@@ -5,20 +5,21 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.net.URI
 import java.net.URLEncoder
 
-// Data class for Datamuse API
+// Data class for Datamuse API and relatedwords.org API
 @Serializable
-data class DatamuseResult(val word: String)
+data class WordResult(val word: String)
 
-// Data class for htmlweb.ru API
+// Data class for htmlweb.ru API, handles inconsistent `items` field
 @Serializable
-data class HtmlWebResult(val status: Int, val items: List<String>)
-
-// Data class for relatedwords.org API
-@Serializable
-data class RelatedWordsResult(val words: List<String>)
+data class HtmlWebResult(val status: Int, val items: JsonElement)
 
 // A single, reusable Json instance to avoid redundant creations and improve performance.
 private val json = Json { ignoreUnknownKeys = true }
@@ -29,7 +30,7 @@ private suspend fun getFormsFromDatamuse(baseWord: String): List<String> {
 
     return try {
         val jsonText = URI(apiUrl).toURL().readText()
-        json.decodeFromString<List<DatamuseResult>>(jsonText).map { it.word }
+        json.decodeFromString<List<WordResult>>(jsonText).map { it.word }
     } catch (e: Exception) {
         println("⚠️ Error fetching from Datamuse: ${e.message}")
         emptyList()
@@ -42,7 +43,13 @@ private suspend fun getFormsFromHtmlWeb(baseWord: String): List<String> {
     return try {
         val jsonText = URI(apiUrl).toURL().readText()
         val response = json.decodeFromString<HtmlWebResult>(jsonText)
-        if (response.status == 200) response.items else emptyList()
+        if (response.status == 200 && response.items is JsonArray) {
+            // If `items` is an array, decode it to a list of strings
+            response.items.jsonArray.map { it.jsonPrimitive.content }
+        } else {
+            // If `items` is `false` or something else, return an empty list
+            emptyList()
+        }
     } catch (e: Exception) {
         println("⚠️ Error fetching from htmlweb.ru: ${e.message}")
         emptyList()
@@ -54,7 +61,12 @@ private suspend fun getFormsFromRelatedWords(baseWord: String): List<String> {
     val apiUrl = "https://relatedwords.org/api/related?term=$encodedWord"
     return try {
         val jsonText = URI(apiUrl).toURL().readText()
-        json.decodeFromString<RelatedWordsResult>(jsonText).words
+        // Explicitly handle the empty array case for robustness.
+        if (jsonText.trim() == "[]") {
+            return emptyList()
+        }
+        // This API sometimes returns an array of objects, not an object containing an array
+        json.decodeFromString<List<WordResult>>(jsonText).map { it.word }
     } catch (e: Exception) {
         println("⚠️ Error fetching from relatedwords.org: ${e.message}")
         emptyList()
@@ -72,7 +84,8 @@ suspend fun getWordForms(baseWord: String): List<String> = coroutineScope {
     )
 
     val results = deferreds.awaitAll()
-    val allForms = (results.flatten() + baseWord).toSet().toList()
+    // Combine results, convert to lowercase, add the original word, and remove duplicates.
+    val allForms = (results.flatten() + baseWord).map { it.lowercase() }.toSet().toList()
 
-    allForms.ifEmpty { listOf(baseWord) } // Ensure we never return an empty list
+    allForms.ifEmpty { listOf(baseWord.lowercase()) } // Ensure we never return an empty list
 }
