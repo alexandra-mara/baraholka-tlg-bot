@@ -11,6 +11,7 @@ import com.botbot.handlers.handleStart
 import com.botbot.handlers.handleStats
 import com.botbot.handlers.handleStop
 import com.botbot.handlers.handleUsers
+import com.botbot.handlers.handleWordForms
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
@@ -42,6 +43,7 @@ fun main() {
             command("stats") { CoroutineScope(Dispatchers.IO).launch { handleStats(bot, message, database, Config.MONITORED_CHATS) } }
             command("show") { CoroutineScope(Dispatchers.IO).launch { handleShow(bot, message, args, database) } }
             command("users") { CoroutineScope(Dispatchers.IO).launch { handleUsers(bot, message, database) } }
+            command("wordforms") { CoroutineScope(Dispatchers.IO).launch { handleWordForms(bot, message, args) } }
             message { CoroutineScope(Dispatchers.IO).launch { handleMessage(message, database, Config.MONITORED_CHATS) } }
         }
     }

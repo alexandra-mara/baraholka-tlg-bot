@@ -16,6 +16,7 @@ fun handleHelp(bot: Bot, message: Message) {
         `/stats` - database statistics
         `/show [count]` - show the last messages (default: 10)
         `/users` - ⚠️ (Admin/Debug) List all tracked users.
+        `/wordforms [word]` - (Debug) Show all word forms for a given word.
         
          *Examples:*
                     /search tent

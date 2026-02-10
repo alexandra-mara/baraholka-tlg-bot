@@ -1,8 +1,11 @@
 package com.botbot.services
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.net.URL
+import java.net.URI
 import java.net.URLEncoder
 
 // Data class for Datamuse API
@@ -13,32 +16,32 @@ data class DatamuseResult(val word: String)
 @Serializable
 data class HtmlWebResult(val status: Int, val items: List<String>)
 
+// Data class for relatedwords.org API
+@Serializable
+data class RelatedWordsResult(val words: List<String>)
 
-/**
- * Gets word forms from the Datamuse API.
- */
+// A single, reusable Json instance to avoid redundant creations and improve performance.
+private val json = Json { ignoreUnknownKeys = true }
+
 private suspend fun getFormsFromDatamuse(baseWord: String): List<String> {
     val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
     val apiUrl = "https://api.datamuse.com/words?sp=$encodedWord*&v=ru"
 
     return try {
-        val jsonText = URL(apiUrl).readText()
-        Json { ignoreUnknownKeys = true }.decodeFromString<List<DatamuseResult>>(jsonText).map { it.word }
+        val jsonText = URI(apiUrl).toURL().readText()
+        json.decodeFromString<List<DatamuseResult>>(jsonText).map { it.word }
     } catch (e: Exception) {
         println("⚠️ Error fetching from Datamuse: ${e.message}")
         emptyList()
     }
 }
 
-/**
- * Gets word forms from the htmlweb.ru API.
- */
 private suspend fun getFormsFromHtmlWeb(baseWord: String): List<String> {
     val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
     val apiUrl = "https://htmlweb.ru/json/service/inflect?inflect=$encodedWord"
     return try {
-        val jsonText = URL(apiUrl).readText()
-        val response = Json { ignoreUnknownKeys = true }.decodeFromString<HtmlWebResult>(jsonText)
+        val jsonText = URI(apiUrl).toURL().readText()
+        val response = json.decodeFromString<HtmlWebResult>(jsonText)
         if (response.status == 200) response.items else emptyList()
     } catch (e: Exception) {
         println("⚠️ Error fetching from htmlweb.ru: ${e.message}")
@@ -46,16 +49,30 @@ private suspend fun getFormsFromHtmlWeb(baseWord: String): List<String> {
     }
 }
 
-/**
- * Orchestrates getting word forms from multiple APIs for robustness.
- */
-suspend fun getWordForms(baseWord: String): List<String> {
-    // Call both APIs concurrently
-    val datamuseForms = getFormsFromDatamuse(baseWord)
-    val htmlWebForms = getFormsFromHtmlWeb(baseWord)
+private suspend fun getFormsFromRelatedWords(baseWord: String): List<String> {
+    val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
+    val apiUrl = "https://relatedwords.org/api/related?term=$encodedWord"
+    return try {
+        val jsonText = URI(apiUrl).toURL().readText()
+        json.decodeFromString<RelatedWordsResult>(jsonText).words
+    } catch (e: Exception) {
+        println("⚠️ Error fetching from relatedwords.org: ${e.message}")
+        emptyList()
+    }
+}
 
-    // Combine results, add the original word, and remove duplicates
-    val allForms = (datamuseForms + htmlWebForms + listOf(baseWord)).toSet().toList()
-    
-    return allForms.ifEmpty { listOf(baseWord) } // Ensure we never return an empty list
+/**
+ * Orchestrates getting word forms from multiple sources concurrently for better performance.
+ */
+suspend fun getWordForms(baseWord: String): List<String> = coroutineScope {
+    val deferreds = listOf(
+        async { getFormsFromDatamuse(baseWord) },
+        async { getFormsFromHtmlWeb(baseWord) },
+        async { getFormsFromRelatedWords(baseWord) }
+    )
+
+    val results = deferreds.awaitAll()
+    val allForms = (results.flatten() + baseWord).toSet().toList()
+
+    allForms.ifEmpty { listOf(baseWord) } // Ensure we never return an empty list
 }
