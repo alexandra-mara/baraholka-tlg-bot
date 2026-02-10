@@ -4,7 +4,7 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 
 ## Features
 
-- **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database (`messages_v2.db`).
+- **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database (`messages.db`).
 - **Advanced Search**: The `/search` command supports finding all word forms of a query (e.g., searching for 'run' will also find 'ran' and 'running').
 - **Direct Message Links**: Search and show results include a direct link to the original message for easy access.
 - **User Tracking**: Counts the number of unique users who have interacted with the bot.

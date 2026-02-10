@@ -1,6 +1,6 @@
 package com.botbot.utils
 
-import com.botbot.db.SearchResult
+import com.botbot.db.model.SearchResult
 
 fun createMessageLink(result: SearchResult): String {
     return if (result.chatUsername != null) {

@@ -1,18 +1,24 @@
 package com.botbot.db
 
-import java.sql.*
+import com.botbot.db.model.DatabaseStats
+import com.botbot.db.model.SearchResult
+import com.botbot.db.model.User
+import java.sql.Connection
+import java.sql.DriverManager
+import java.sql.SQLException
+import java.sql.Types
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.Instant
 
-class MessageDatabase() {
+class MessageDatabase {
     private var connection: Connection
 
     init {
-        // Создаём или подключаемся к базе
-        connection = DriverManager.getConnection("jdbc:sqlite:messages_v3.db")
+        // Create or connect to the database
+        connection = DriverManager.getConnection("jdbc:sqlite:messages.db")
         createTables()
-        println("✅ База данных подключена: messages_v3.db")
+        println("✅ Database connected: messages.db")
     }
 
     private fun createTables() {
@@ -60,7 +66,7 @@ class MessageDatabase() {
         text: String,
         senderName: String?,
         senderId: Long?,
-        timestamp: Long // Unix timestamp из Telegram
+        timestamp: Long // Unix timestamp from Telegram
     ) {
         val sql = """
             INSERT OR IGNORE INTO messages 
@@ -81,7 +87,7 @@ class MessageDatabase() {
                 pstmt.executeUpdate()
             }
         } catch (e: SQLException) {
-            println("⚠️ Ошибка сохранения сообщения: ${e.message}")
+            println("⚠️ Error saving message: ${e.message}")
         }
     }
 
@@ -94,7 +100,7 @@ class MessageDatabase() {
                 pstmt.executeUpdate()
             }
         } catch (e: SQLException) {
-            println("⚠️ Ошибка сохранения пользователя: ${e.message}")
+            println("⚠️ Error saving user: ${e.message}")
         }
     }
 
@@ -259,26 +265,3 @@ class MessageDatabase() {
         connection.close()
     }
 }
-
-data class SearchResult(
-    val chatId: Long,
-    val chatTitle: String,
-    val chatUsername: String?,
-    val messageId: Long,
-    val text: String,
-    val senderName: String?,
-    val timestamp: LocalDateTime
-)
-
-data class DatabaseStats(
-    val totalMessages: Int = 0,
-    val totalChats: Int = 0,
-    val totalUsers: Int = 0,
-    val oldestMessage: LocalDateTime? = null,
-    val newestMessage: LocalDateTime? = null
-)
-
-data class User(
-    val id: Long,
-    val name: String
-)

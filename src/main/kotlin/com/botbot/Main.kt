@@ -24,7 +24,7 @@ fun main() {
     val database = MessageDatabase()
 
     println("🤖 Bot starting...")
-    println("📁 Database: messages_v3.db")
+    println("📁 Database: messages.db")
     println("📡 Monitored chats: ${Config.MONITORED_CHATS.size}")
     if (Config.MONITORED_CHATS.isEmpty()) {
         println("⚠️ MONITORED_CHATS is empty! Add chat_id for filtering.")
