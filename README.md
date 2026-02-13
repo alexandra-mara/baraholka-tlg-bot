@@ -5,7 +5,8 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 ## Features
 
 - **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database (`messages.db`).
-- **Advanced Search**: The `/search` command supports finding all word forms of a query (e.g., searching for 'run' will also find 'ran' and 'running').
+- **Advanced Search**: The `/search` command supports finding all word forms of a query from multiple online sources.
+- **Callback Search**: The `/search_callback` command performs a search and delivers the results to you in a private message.
 - **Direct Message Links**: Search and show results include a direct link to the original message for easy access.
 - **User Tracking**: Counts the number of unique users who have interacted with the bot.
 - **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, total users, and total chats.
@@ -80,11 +81,13 @@ Alternatively, you can run the bot directly with Gradle:
 - `/start`: Starts the bot.
 - `/stop`: Stops the bot.
 - `/help`: Displays a list of available commands and examples.
-- `/search <query>`: Searches the database for messages. The search is case-insensitive and matches all word forms.
+- `/search <query>`: Searches the database for messages in the current chat.
+- `/search_callback <query>`: Performs a search and delivers the results to you in a private message.
 - `/stats`: Shows statistics about the messages, users, and chats stored in the database.
 - `/show [count]`: Shows the last N messages from the database (default: 10).
 - `/chatid`: Responds with the unique ID of the current chat.
 - `/users`: ⚠️ **(Admin/Debug)** Lists all users who have interacted with the bot, including their names and IDs. This command should be used for debugging purposes only and should be removed if privacy is a concern.
+- `/wordforms [word]`: (Debug) Shows all word forms for a given word from all online sources.
 
 ### Silent Chat ID Detection
 
