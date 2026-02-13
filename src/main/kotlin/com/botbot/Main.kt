@@ -6,6 +6,7 @@ import com.botbot.handlers.handleChatId
 import com.botbot.handlers.handleHelp
 import com.botbot.handlers.handleMessage
 import com.botbot.handlers.handleSearch
+import com.botbot.handlers.handleSearchCallback
 import com.botbot.handlers.handleShow
 import com.botbot.handlers.handleStart
 import com.botbot.handlers.handleStats
@@ -40,6 +41,7 @@ fun main() {
             command("help") { CoroutineScope(Dispatchers.IO).launch { handleHelp(bot, message) } }
             command("chatid") { CoroutineScope(Dispatchers.IO).launch { handleChatId(bot, message) } }
             command("search") { CoroutineScope(Dispatchers.IO).launch { handleSearch(bot, message, args, database, Config.MONITORED_CHATS) } }
+            command("search_callback") { CoroutineScope(Dispatchers.IO).launch { handleSearchCallback(bot, message, args, database, Config.MONITORED_CHATS) } }
             command("stats") { CoroutineScope(Dispatchers.IO).launch { handleStats(bot, message, database, Config.MONITORED_CHATS) } }
             command("show") { CoroutineScope(Dispatchers.IO).launch { handleShow(bot, message, args, database) } }
             command("users") { CoroutineScope(Dispatchers.IO).launch { handleUsers(bot, message, database) } }

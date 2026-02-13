@@ -12,7 +12,8 @@ fun handleHelp(bot: Bot, message: Message) {
         `/start` - Start interacting with the bot
         `/stop` - Stop the current session
         `/help` - Show this message
-        `/search [query]` - search for listings
+        `/search [query]` - search for listings in the current chat
+        `/search_callback [query]` - search and get results in a private message
         `/stats` - database statistics
         `/show [count]` - show the last messages (default: 10)
         `/users` - ⚠️ (Admin/Debug) List all tracked users.
@@ -20,7 +21,7 @@ fun handleHelp(bot: Bot, message: Message) {
         
          *Examples:*
                     /search tent
-                    /search bicycle
+                    /search_callback bicycle
                     /search apartment Limassol
          💡 Searches for the last 7 days
 

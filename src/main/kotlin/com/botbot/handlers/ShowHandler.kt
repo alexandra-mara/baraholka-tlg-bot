@@ -9,6 +9,17 @@ import com.github.kotlintelegrambot.entities.ParseMode
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+// Helper to escape Markdown characters in user-generated content
+private fun String.escapeMarkdown(): String {
+    return this.replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
+        .replace("_", "\\_")
+        .replace("*", "\\*")
+        .replace("`", "\\`")
+}
+
 suspend fun handleShow(bot: Bot, message: Message, args: List<String>, database: MessageDatabase) {
     val limit = args.firstOrNull()?.toIntOrNull() ?: 10
 
@@ -24,10 +35,11 @@ suspend fun handleShow(bot: Bot, message: Message, args: List<String>, database:
             val localTimestamp = result.timestamp.atZone(ZoneId.systemDefault())
             val formattedTimestamp = localTimestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
             val link = createMessageLink(result)
-            
+            val safeText = result.text.escapeMarkdown()
+
             """
             [$formattedTimestamp] *${result.chatTitle}* | ${result.senderName ?: "N/A"}
-            ${result.text}
+            $safeText
             [Go to message]($link)
             """.trimIndent()
         }

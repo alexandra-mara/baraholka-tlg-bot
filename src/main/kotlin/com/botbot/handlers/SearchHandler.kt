@@ -12,6 +12,17 @@ import java.io.File
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+// Helper to escape Markdown characters in user-generated content
+private fun String.escapeMarkdown(): String {
+    return this.replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
+        .replace("_", "\\_")
+        .replace("*", "\\*")
+        .replace("`", "\\`")
+}
+
 suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, database: MessageDatabase, monitoredChats: List<Long>) {
     if (database.getStats().totalMessages == 0) {
         bot.sendMessage(
@@ -32,24 +43,13 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
         return
     }
 
-    // Show "searching..."
     bot.sendMessage(
         chatId = ChatId.fromId(message.chat.id),
-        text = "🔎 Searching for word forms of \"$query\"..."
+        text = "🔎 Searching for an exact match of \"$query\"..."
     )
 
-    // Get word forms from the new, more reliable API
-    var wordForms = getWordForms(query)
+    val wordForms = listOf(query)
 
-    val logMessage = "[Search] Original Query: '$query', Word Forms Found: ${wordForms.joinToString()}"
-    println(logMessage)
-    File("full_activity.log").appendText("$logMessage\n")
-
-    if (wordForms.isEmpty()) {
-        wordForms = listOf(query) // Fallback to original query if service fails
-    }
-
-    // Searching in the database
     val results = database.searchMessages(
         query = wordForms,
         chatIds = monitoredChats.takeIf { it.isNotEmpty() },
@@ -57,7 +57,6 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
         limit = 10
     )
 
-    // Forming the response
     if (results.isEmpty()) {
         bot.sendMessage(
             chatId = ChatId.fromId(message.chat.id),
@@ -65,7 +64,6 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
             parseMode = ParseMode.MARKDOWN
         )
     } else {
-        // Sending the first result with the count
         val dateFormatter = DateTimeFormatter.ofPattern("dd.MM HH:mm")
 
         bot.sendMessage(
@@ -77,10 +75,11 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
             ${results.take(3).joinToString("\n\n") { result ->
                 val localTimestamp = result.timestamp.atZone(ZoneId.systemDefault())
                 val link = createMessageLink(result)
+                val safeText = result.text.escapeMarkdown()
                 "🏷️ ${result.chatTitle}\n" +
                         "👤 ${result.senderName ?: "Anonymous"}\n" +
                         "🕐 ${localTimestamp.format(dateFormatter)}\n" +
-                        "💬 ${result.text.take(150)}${if (result.text.length > 150) "..." else ""}\n" +
+                        "💬 $safeText${if (result.text.length > 150) "..." else ""}\n" +
                         "[Go to message]($link)"
             }}
             
@@ -89,10 +88,10 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
             parseMode = ParseMode.MARKDOWN
         )
 
-        // Sending the rest of the results one by one
         results.drop(3).take(5).forEachIndexed { index, result ->
             delay(500) // To avoid flood limit
             val link = createMessageLink(result)
+            val safeText = result.text.escapeMarkdown()
 
             bot.sendMessage(
                 chatId = ChatId.fromId(message.chat.id),
@@ -102,7 +101,7 @@ suspend fun handleSearch(bot: Bot, message: Message, args: List<String>, databas
                 From: ${result.senderName ?: "Anonymous"}
                 Time: ${result.timestamp.atZone(ZoneId.systemDefault()).format(dateFormatter)}
                 
-                ${result.text}
+                $safeText
                 [Go to message]($link)
                 """.trimIndent(),
                 parseMode = ParseMode.MARKDOWN
