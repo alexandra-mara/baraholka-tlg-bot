@@ -89,6 +89,10 @@ Alternatively, you can run the bot directly with Gradle:
 - `/users`: ⚠️ **(Admin/Debug)** Lists all users who have interacted with the bot, including their names and IDs. This command should be used for debugging purposes only and should be removed if privacy is a concern.
 - `/wordforms [word]`: (Debug) Shows all word forms for a given word from all online sources.
 
+### Important Note on Private Messages
+
+For commands like `/search_callback` to work, you must have first initiated a private chat with the bot. Simply find the bot in your Telegram client and send it a message (e.g., `/start`).
+
 ### Silent Chat ID Detection
 
 If the bot is a member of a chat that is **not** in your `MONITORED_CHATS` list, it will automatically print the chat's ID to the console the first time a message is sent there. This makes it easy to find the IDs of new chats you wish to monitor.
