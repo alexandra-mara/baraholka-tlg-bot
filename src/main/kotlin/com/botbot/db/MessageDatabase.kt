@@ -2,6 +2,7 @@ package com.botbot.db
 
 import com.botbot.db.model.DatabaseStats
 import com.botbot.db.model.SearchResult
+import com.botbot.db.model.Subscription
 import com.botbot.db.model.User
 import java.sql.Connection
 import java.sql.DriverManager
@@ -16,9 +17,9 @@ class MessageDatabase {
 
     init {
         // Create or connect to the database
-        connection = DriverManager.getConnection("jdbc:sqlite:messages_v4.db")
+        connection = DriverManager.getConnection("jdbc:sqlite:messages_v5.db")
         createTables()
-        println("✅ Database connected: messages_v4.db")
+        println("✅ Database connected: messages_v5.db")
     }
 
     private fun createTables() {
@@ -48,16 +49,100 @@ class MessageDatabase {
             )
         """
 
+        val createSubscriptionsTableSQL = """
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                subscription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id BIGINT NOT NULL,
+                keyword TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, keyword)
+            )
+        """
+
         val createIndexSQL = """
             CREATE INDEX IF NOT EXISTS idx_search 
             ON messages(message_text, timestamp)
         """
 
+        val createSubscriptionIndexSQL = "CREATE INDEX IF NOT EXISTS idx_subscription_keyword ON subscriptions(keyword)"
+
         connection.createStatement().use { stmt ->
             stmt.execute(createMessagesTableSQL)
             stmt.execute(createUsersTableSQL)
+            stmt.execute(createSubscriptionsTableSQL)
             stmt.execute(createIndexSQL)
+            stmt.execute(createSubscriptionIndexSQL)
         }
+    }
+
+    fun findSubscribersForKeywords(keywords: Set<String>): Map<String, List<Long>> {
+        if (keywords.isEmpty()) return emptyMap()
+
+        val placeholders = keywords.joinToString(",") { "?" }
+        val sql = "SELECT keyword, user_id FROM subscriptions WHERE keyword IN ($placeholders)"
+        val subscribers = mutableMapOf<String, MutableList<Long>>()
+
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                keywords.forEachIndexed { index, keyword ->
+                    pstmt.setString(index + 1, keyword)
+                }
+                pstmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val keyword = rs.getString("keyword")
+                        val userId = rs.getLong("user_id")
+                        subscribers.getOrPut(keyword) { mutableListOf() }.add(userId)
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error finding subscribers: ${e.message}")
+        }
+        return subscribers
+    }
+
+    fun addSubscription(userId: Long, keyword: String) {
+        val sql = "INSERT OR IGNORE INTO subscriptions (user_id, keyword) VALUES (?, ?)"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setLong(1, userId)
+                pstmt.setString(2, keyword.lowercase())
+                pstmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error adding subscription: ${e.message}")
+        }
+    }
+
+    fun removeSubscription(userId: Long, keyword: String) {
+        val sql = "DELETE FROM subscriptions WHERE user_id = ? AND keyword = ?"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setLong(1, userId)
+                pstmt.setString(2, keyword.lowercase())
+                pstmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error removing subscription: ${e.message}")
+        }
+    }
+
+    fun getSubscriptionsForUser(userId: Long): List<String> {
+        val sql = "SELECT keyword FROM subscriptions WHERE user_id = ? ORDER BY keyword"
+        val keywords = mutableListOf<String>()
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setLong(1, userId)
+                pstmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        keywords.add(rs.getString("keyword"))
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error getting subscriptions: ${e.message}")
+        }
+        return keywords
     }
 
     fun saveMessage(

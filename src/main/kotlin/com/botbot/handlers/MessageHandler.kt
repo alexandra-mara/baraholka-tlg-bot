@@ -1,12 +1,20 @@
 package com.botbot.handlers
 
 import com.botbot.db.MessageDatabase
+import com.botbot.services.getWordForms
+import com.botbot.utils.createMessageLink
+import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
+import com.github.kotlintelegrambot.entities.ParseMode
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: List<Long>) {
+suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase, monitoredChats: List<Long>) = coroutineScope {
     val chat = message.chat
     val chatId = chat.id
     val chatTitle = chat.title
@@ -26,11 +34,12 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
     File("full_activity.log").appendText("$logMessage\n")
     // ----------------------------------------------
 
-    // Only save the user who sent the message in this chat.
+    // Always save the user who sent the message.
     user?.let { database.saveUser(it.id, it.firstName) }
 
-    // If chat is monitored, save the message to the database
+    // --- Main Logic: Save Message & Dispatch Notifications ---
     if (chatId in monitoredChats) {
+        // 1. Save the message to the database
         if (text.isNotBlank()) {
             database.saveMessage(
                 chatId = chatId,
@@ -45,27 +54,57 @@ fun handleMessage(message: Message, database: MessageDatabase, monitoredChats: L
                 timestamp = message.date
             )
         }
-    } else {
-        // This is an unmonitored chat.
-        // Log its ID to the console and a file, but only once.
-        if (chat.type == "supergroup" || chat.type == "group" || chat.type == "private" || chat.type == "channel") {
-            val logFile = File("chat_ids.log")
-            val logFileContent = if (logFile.exists()) logFile.readText() else ""
 
-            val hasBeenLogged = logFileContent.lines().any { it.startsWith("$chatId|") }
+        // 2. Deconstruct message into searchable keywords
+        val baseWords = text.split(" ").map { it.lowercase().trim() }.filter { it.length > 3 }.toSet()
+        val allKeywordForms = baseWords.map { getWordForms(it) }.flatten().toSet()
 
-            if (!hasBeenLogged) {
-                val effectiveTitle = chatTitle ?: "Private Chat with ${user?.firstName ?: "user"}"
-                val logTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        // 3. Find subscribers for these keywords
+        val subscribers = database.findSubscribersForKeywords(allKeywordForms)
 
-                logFile.appendText("$chatId|$effectiveTitle|$logTimestamp\n")
+        // 4. Dispatch notifications
+        if (subscribers.isNotEmpty()) {
+            val log = "[Notification] Found subscribers for keywords: ${subscribers.keys.joinToString()}"
+            println(log)
+            File("full_activity.log").appendText("$log\n")
 
-                println("\n🎯 New unmonitored chat detected (logging to chat_ids.log):")
-                println("   Type: ${chat.type}")
-                println("   Title: $effectiveTitle")
-                println("   ID: $chatId")
-                println("   (Add this ID to your Config.kt to start saving messages)")
+            subscribers.forEach { (keyword, userIds) ->
+                userIds.forEach { subscriberId ->
+                    // Don't notify the user about their own message
+                    if (subscriberId == userId) return@forEach
+
+                    launch {
+                        val notificationText = "🔔 You have a new notification for the keyword '$keyword' in the chat *${chatTitle}*."
+                        bot.sendMessage(chatId = ChatId.fromId(subscriberId), text = notificationText, parseMode = ParseMode.MARKDOWN)
+                        delay(500) // Small delay to prevent rate-limiting
+                    }
+                }
             }
+        }
+    } else {
+        // This is an unmonitored chat. Log its ID for discoverability.
+        logUnmonitoredChat(chat, userId, userName)
+    }
+}
+
+private fun logUnmonitoredChat(chat: com.github.kotlintelegrambot.entities.Chat, userId: Long?, userName: String?) {
+    if (chat.type == "supergroup" || chat.type == "group" || chat.type == "private" || chat.type == "channel") {
+        val logFile = File("chat_ids.log")
+        val logFileContent = if (logFile.exists()) logFile.readText() else ""
+
+        val hasBeenLogged = logFileContent.lines().any { it.startsWith("${chat.id}|") }
+
+        if (!hasBeenLogged) {
+            val effectiveTitle = chat.title ?: "Private Chat with ${userName ?: "user"}"
+            val logTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            logFile.appendText("${chat.id}|$effectiveTitle|$logTimestamp\n")
+
+            println("\n🎯 New unmonitored chat detected (logging to chat_ids.log):")
+            println("   Type: ${chat.type}")
+            println("   Title: $effectiveTitle")
+            println("   ID: ${chat.id}")
+            println("   (Add this ID to your Config.kt to start saving messages)")
         }
     }
 }

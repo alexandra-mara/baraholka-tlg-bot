@@ -2,17 +2,7 @@ package com.botbot
 
 import com.botbot.config.Config
 import com.botbot.db.MessageDatabase
-import com.botbot.handlers.handleChatId
-import com.botbot.handlers.handleHelp
-import com.botbot.handlers.handleMessage
-import com.botbot.handlers.handleSearch
-import com.botbot.handlers.handleSearchCallback
-import com.botbot.handlers.handleShow
-import com.botbot.handlers.handleStart
-import com.botbot.handlers.handleStats
-import com.botbot.handlers.handleStop
-import com.botbot.handlers.handleUsers
-import com.botbot.handlers.handleWordForms
+import com.botbot.handlers.*
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
@@ -26,7 +16,7 @@ fun main() {
     val database = MessageDatabase()
 
     println("🤖 Bot starting...")
-    println("📁 Database: messages_v4.db")
+    println("📁 Database: messages_v5.db")
     println("📡 Monitored chats: ${Config.MONITORED_CHATS.size}")
     if (Config.MONITORED_CHATS.isEmpty()) {
         println("⚠️ MONITORED_CHATS is empty! Add chat_id for filtering.")
@@ -46,7 +36,11 @@ fun main() {
             command("show") { CoroutineScope(Dispatchers.IO).launch { handleShow(bot, message, args, database) } }
             command("users") { CoroutineScope(Dispatchers.IO).launch { handleUsers(bot, message, database) } }
             command("wordforms") { CoroutineScope(Dispatchers.IO).launch { handleWordForms(bot, message, args) } }
-            message { CoroutineScope(Dispatchers.IO).launch { handleMessage(message, database, Config.MONITORED_CHATS) } }
+            command("subscribe") { CoroutineScope(Dispatchers.IO).launch { handleSubscribe(bot, message, args, database) } }
+            command("sub") { CoroutineScope(Dispatchers.IO).launch { handleSubscribe(bot, message, args, database) } }
+            command("unsubscribe") { CoroutineScope(Dispatchers.IO).launch { handleUnsubscribe(bot, message, args, database) } }
+            command("mysubs") { CoroutineScope(Dispatchers.IO).launch { handleMySubscriptions(bot, message, database) } }
+            message { handleMessage(bot, message, database, Config.MONITORED_CHATS) }
         }
     }
 

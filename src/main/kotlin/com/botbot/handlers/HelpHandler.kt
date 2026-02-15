@@ -16,16 +16,17 @@ fun handleHelp(bot: Bot, message: Message) {
         `/search_callback [query]` - search and get results in a private message
         `/stats` - database statistics
         `/show [count]` - show the last messages (default: 10)
-        `/users` - ⚠️ (Admin/Debug) List all tracked users.
-        `/wordforms [word]` - (Debug) Show all word forms for a given word.
+        `/subscribe [keyword]` - get a notification when a keyword is mentioned
+        `/unsubscribe [keyword]` - remove a subscription
+        `/mysubs` - show your active subscriptions
+
+        *Debug Commands:*
+        `/users` - ⚠️ List all tracked users
+        `/wordforms [word]` - Show all word forms for a given word
         
          *Examples:*
                     /search tent
-                    /search_callback bicycle
-                    /search apartment Limassol
-         💡 Searches for the last 7 days
-
-        📝 Just send a text, and the bot will answer!
+                    /subscribe bicycle
     """.trimIndent()
 
     bot.sendMessage(
