@@ -75,7 +75,16 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
 
                     launch {
                         val notificationText = "🔔 You have a new notification for the keyword '$keyword' in the chat *${chatTitle}*."
-                        bot.sendMessage(chatId = ChatId.fromId(subscriberId), text = notificationText, parseMode = ParseMode.MARKDOWN)
+                        bot.sendMessage(chatId = ChatId.fromId(subscriberId), text = notificationText, parseMode = ParseMode.MARKDOWN).fold(
+                            {
+                                // Success
+                            },
+                            {
+                                val errorLog = "[Notification Error] Failed to send PM to $subscriberId: $it"
+                                println(errorLog)
+                                File("full_activity.log").appendText("$errorLog\n")
+                            }
+                        )
                         delay(500) // Small delay to prevent rate-limiting
                     }
                 }

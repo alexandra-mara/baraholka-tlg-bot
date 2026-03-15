@@ -127,6 +127,18 @@ class MessageDatabase {
         }
     }
 
+    fun removeAllSubscriptions(userId: Long) {
+        val sql = "DELETE FROM subscriptions WHERE user_id = ?"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setLong(1, userId)
+                pstmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error removing all subscriptions: ${e.message}")
+        }
+    }
+
     fun getSubscriptionsForUser(userId: Long): List<String> {
         val sql = "SELECT keyword FROM subscriptions WHERE user_id = ? ORDER BY keyword"
         val keywords = mutableListOf<String>()

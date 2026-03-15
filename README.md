@@ -1,18 +1,16 @@
 # Telegram Message Saver & Search Bot
 
-A Kotlin-based Telegram bot designed to automatically save messages from specific group chats, supergroups, and channels into a local SQLite database. It provides a powerful search functionality and user tracking.
+A Kotlin-based Telegram bot designed to automatically save messages from specific group chats and notify users based on keyword subscriptions.
 
 ## Features
 
-- **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database (`messages.db`).
+- **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database.
+- **Keyword Subscriptions**: Users can `/subscribe` to keywords and receive instant private notifications when those words appear in monitored chats.
 - **Advanced Search**: The `/search` command supports finding all word forms of a query from multiple online sources.
 - **Callback Search**: The `/search_callback` command performs a search and delivers the results to you in a private message.
-- **Direct Message Links**: Search and show results include a direct link to the original message for easy access.
+- **Direct Message Links**: All notifications and search results include a direct link to the original message.
 - **User Tracking**: Counts the number of unique users who have interacted with the bot.
-- **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, total users, and total chats.
-- **Chat ID Discovery**: Includes a `/chatid` command and a silent detection feature to easily find the IDs of new or unmonitored chats.
-- **Secure Configuration**: Bot token is managed securely via an environment variable or a local `.env` file.
-- **Modern Tech Stack**: Built with Kotlin, Coroutines, and Gradle.
+- **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, users, and chats.
 
 ## Getting Started
 
@@ -23,76 +21,50 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 
 ### Setup & Configuration
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd tlg-bot
-    ```
+1.  **Clone the repository.**
 
 2.  **Configure the Bot Token:**
-    Run the `start.sh` script. It will automatically create a `.env` file for you if it doesn't exist.
-    ```bash
-    ./start.sh
-    ```
-    Then, open the `.env` file and add your Telegram bot token:
-    ```
-    TELEGRAM_BOT_TOKEN=your_token_here
-    ```
+    - Run `./start.sh`. It will create a `.env` file if one doesn't exist.
+    - Add your Telegram bot token to the `.env` file.
 
 3.  **Important: Disable Group Privacy Mode**
-    For the bot to receive all messages in a group chat, you **must** disable its privacy mode.
-
-    1.  Open a chat with **[@BotFather](https://t.me/BotFather)** on Telegram.
-    2.  Send the `/setprivacy` command.
-    3.  Select your bot from the list.
-    4.  Choose the **"Disable"** option.
-
-    If you skip this step, the bot will **not** see regular messages in groups and will not save them to the database. Alternatively, making the bot an administrator of the group also works.
+    - For the bot to receive all messages in a group, you **must** disable its privacy mode via **@BotFather** using the `/setprivacy` command.
+    - Alternatively, making the bot an administrator of the group also works.
 
 4.  **Configure Monitored Chats:**
-    Open `src/main/kotlin/com/botbot/config/Config.kt` and add the chat IDs you want the bot to monitor to the `MONITORED_CHATS` list. For example:
-    ```kotlin
-    val MONITORED_CHATS: List<Long> = listOf(
-        -1001234567890L, // Example Chat 1
-        -1009876543210L  // Example Chat 2
-    )
-    ```
-    *To get a chat ID, add the bot to the chat and use the `/chatid` command or check the console output.* 
+    - Open `src/main/kotlin/com/botbot/config/Config.kt` and add the chat IDs you want the bot to monitor.
 
 ### Running the Bot
-
-Make the `start.sh` script executable and then run it:
 
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
-The bot will start polling for updates.
-
-Alternatively, you can run the bot directly with Gradle:
-
-```bash
-./gradlew run
-```
-
 ## Usage
 
-- `/start`: Starts the bot.
-- `/stop`: Stops the bot.
-- `/help`: Displays a list of available commands and examples.
+### Subscription Commands
+- `/subscribe <keyword>`: Get a notification when a keyword is mentioned.
+- `/sub <keyword>`: Alias for `/subscribe`.
+- `/unsubscribe <keyword>`: Remove a subscription.
+- `/unsubscribe_all`: Remove all your active subscriptions.
+- `/mysubs`: Show your active subscriptions.
+
+### Search & History Commands
 - `/search <query>`: Searches the database for messages in the current chat.
 - `/search_callback <query>`: Performs a search and delivers the results to you in a private message.
-- `/stats`: Shows statistics about the messages, users, and chats stored in the database.
 - `/show [count]`: Shows the last N messages from the database (default: 10).
+
+### Utility Commands
+- `/start` & `/stop`: Starts and stops the bot.
+- `/help`: Displays the command list.
 - `/chatid`: Responds with the unique ID of the current chat.
-- `/users`: ⚠️ **(Admin/Debug)** Lists all users who have interacted with the bot, including their names and IDs. This command should be used for debugging purposes only and should be removed if privacy is a concern.
-- `/wordforms [word]`: (Debug) Shows all word forms for a given word from all online sources.
+- `/stats`: Shows database statistics.
+
+### Debug Commands
+- `/users`: ⚠️ List all tracked users (Debug only).
+- `/wordforms <word>`: Show all word forms for a given word.
 
 ### Important Note on Private Messages
 
-For commands like `/search_callback` to work, you must have first initiated a private chat with the bot. Simply find the bot in your Telegram client and send it a message (e.g., `/start`).
-
-### Silent Chat ID Detection
-
-If the bot is a member of a chat that is **not** in your `MONITORED_CHATS` list, it will automatically print the chat's ID to the console the first time a message is sent there. This makes it easy to find the IDs of new chats you wish to monitor.
+For commands like `/search_callback` or for receiving notifications, you must have first initiated a private chat with the bot (e.g., by sending `/start`).

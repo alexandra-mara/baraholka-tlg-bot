@@ -39,6 +39,7 @@ fun main() {
             command("subscribe") { CoroutineScope(Dispatchers.IO).launch { handleSubscribe(bot, message, args, database) } }
             command("sub") { CoroutineScope(Dispatchers.IO).launch { handleSubscribe(bot, message, args, database) } }
             command("unsubscribe") { CoroutineScope(Dispatchers.IO).launch { handleUnsubscribe(bot, message, args, database) } }
+            command("unsubscribe_all") { CoroutineScope(Dispatchers.IO).launch { handleUnsubscribeAll(bot, message, database) } }
             command("mysubs") { CoroutineScope(Dispatchers.IO).launch { handleMySubscriptions(bot, message, database) } }
             message { handleMessage(bot, message, database, Config.MONITORED_CHATS) }
         }

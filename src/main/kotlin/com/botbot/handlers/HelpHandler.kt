@@ -18,6 +18,7 @@ fun handleHelp(bot: Bot, message: Message) {
         `/show [count]` - show the last messages (default: 10)
         `/subscribe [keyword]` - get a notification when a keyword is mentioned
         `/unsubscribe [keyword]` - remove a subscription
+        `/unsubscribe_all` - remove all your subscriptions
         `/mysubs` - show your active subscriptions
 
         *Debug Commands:*
