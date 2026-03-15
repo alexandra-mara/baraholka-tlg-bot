@@ -5,12 +5,13 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 ## Features
 
 - **Automatic Message Archiving**: Saves messages from configured Telegram chats into a local SQLite database.
-- **Keyword Subscriptions**: Users can `/subscribe` to keywords and receive instant private notifications when those words appear in monitored chats.
+- **Keyword Subscriptions**: Users can `/subscribe` to keywords and receive instant private notifications.
+- **Optimized Monitoring**: High-performance keyword matching that doesn't rely on external APIs for every message.
 - **Advanced Search**: The `/search` command supports finding all word forms of a query from multiple online sources.
-- **Callback Search**: The `/search_callback` command performs a search and delivers the results to you in a private message.
-- **Direct Message Links**: All notifications and search results include a direct link to the original message.
-- **User Tracking**: Counts the number of unique users who have interacted with the bot.
-- **Database Statistics**: The `/stats` command provides an overview of the database, including total messages, users, and chats.
+- **Callback Search**: Performs searches and delivers results in private messages.
+- **Resilient Networking**: Automatic retries with exponential backoff and timeouts for all external API requests.
+- **Direct Message Links**: Includes direct links to the original messages in notifications and search results.
+- **Discoverability**: Automatically logs unknown chat IDs to `chat_ids.log` for easy configuration.
 
 ## Getting Started
 
@@ -22,17 +23,11 @@ A Kotlin-based Telegram bot designed to automatically save messages from specifi
 ### Setup & Configuration
 
 1.  **Clone the repository.**
-
-2.  **Configure the Bot Token:**
-    - Run `./start.sh`. It will create a `.env` file if one doesn't exist.
-    - Add your Telegram bot token to the `.env` file.
-
-3.  **Important: Disable Group Privacy Mode**
-    - For the bot to receive all messages in a group, you **must** disable its privacy mode via **@BotFather** using the `/setprivacy` command.
-    - Alternatively, making the bot an administrator of the group also works.
-
-4.  **Configure Monitored Chats:**
-    - Open `src/main/kotlin/com/botbot/config/Config.kt` and add the chat IDs you want the bot to monitor.
+2.  **Configure the Bot Token**: Run `./start.sh` to generate a `.env` file and add your token.
+3.  **Disable Group Privacy Mode**: Use `/setprivacy` via @BotFather or make the bot an admin so it can see all messages.
+4.  **Configure Monitored Chats**: 
+    - Add chat IDs to `src/main/kotlin/com/botbot/config/Config.kt`.
+    - You can find the IDs of chats the bot is in by checking `chat_ids.log`.
 
 ### Running the Bot
 
@@ -52,19 +47,21 @@ chmod +x start.sh
 
 ### Search & History Commands
 - `/search <query>`: Searches the database for messages in the current chat.
-- `/search_callback <query>`: Performs a search and delivers the results to you in a private message.
-- `/show [count]`: Shows the last N messages from the database (default: 10).
+- `/search_callback <query>`: Performs a search and delivers results in a private message.
+- `/show [count]`: Shows the last N messages (default: 10).
 
 ### Utility Commands
-- `/start` & `/stop`: Starts and stops the bot.
+- `/start` & `/stop`: Starts and stops the bot session.
 - `/help`: Displays the command list.
-- `/chatid`: Responds with the unique ID of the current chat.
-- `/stats`: Shows database statistics.
+- `/chatid`: Returns the unique ID of the current chat.
+- `/stats`: Shows database statistics (messages, users, chats).
 
 ### Debug Commands
 - `/users`: ⚠️ List all tracked users (Debug only).
 - `/wordforms <word>`: Show all word forms for a given word.
 
-### Important Note on Private Messages
+## Important Notes
 
-For commands like `/search_callback` or for receiving notifications, you must have first initiated a private chat with the bot (e.g., by sending `/start`).
+- **Private Messages**: You must initiate a private chat with the bot (`/start`) to receive notifications or search results.
+- **Self-Notifications**: The bot will **not** notify you about your own messages, even if they contain your subscribed keywords.
+- **Keyword Matching**: Notifications use exact word matching for speed and reliability. Use `/search` for broad matching including word forms.

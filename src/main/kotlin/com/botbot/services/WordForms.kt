@@ -1,15 +1,12 @@
 package com.botbot.services
 
+import com.botbot.utils.fetchUrl
+import com.botbot.utils.withRetryAndTimeout
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
-import java.net.URI
+import kotlinx.serialization.json.*
 import java.net.URLEncoder
 
 // Data class for Datamuse API and relatedwords.org API
@@ -27,49 +24,37 @@ private suspend fun getFormsFromDatamuse(baseWord: String): List<String> {
     val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
     val apiUrl = "https://api.datamuse.com/words?sp=$encodedWord*&v=ru"
 
-    return try {
-        val jsonText = URI(apiUrl).toURL().readText()
+    return withRetryAndTimeout("Datamuse") {
+        val jsonText = fetchUrl(apiUrl)
         json.decodeFromString<List<WordResult>>(jsonText).map { it.word }
-    } catch (e: Exception) {
-        println("⚠️ Error fetching from Datamuse: ${e.message}")
-        emptyList()
-    }
+    } ?: emptyList()
 }
 
 private suspend fun getFormsFromHtmlWeb(baseWord: String): List<String> {
     val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
     val apiUrl = "https://htmlweb.ru/json/service/inflect?inflect=$encodedWord"
-    return try {
-        val jsonText = URI(apiUrl).toURL().readText()
+    return withRetryAndTimeout("htmlweb.ru") {
+        val jsonText = fetchUrl(apiUrl)
         val response = json.decodeFromString<HtmlWebResult>(jsonText)
         if (response.status == 200 && response.items is JsonArray) {
-            // If `items` is an array, decode it to a list of strings
             response.items.jsonArray.map { it.jsonPrimitive.content }
         } else {
-            // If `items` is `false` or something else, return an empty list
             emptyList()
         }
-    } catch (e: Exception) {
-        println("⚠️ Error fetching from htmlweb.ru: ${e.message}")
-        emptyList()
-    }
+    } ?: emptyList()
 }
 
 private suspend fun getFormsFromRelatedWords(baseWord: String): List<String> {
     val encodedWord = URLEncoder.encode(baseWord, "UTF-8")
     val apiUrl = "https://relatedwords.org/api/related?term=$encodedWord"
-    return try {
-        val jsonText = URI(apiUrl).toURL().readText()
-        // Explicitly handle the empty array case for robustness.
+    return withRetryAndTimeout("relatedwords.org") {
+        val jsonText = fetchUrl(apiUrl)
         if (jsonText.trim() == "[]") {
-            return emptyList()
+            emptyList()
+        } else {
+            json.decodeFromString<List<WordResult>>(jsonText).map { it.word }
         }
-        // This API sometimes returns an array of objects, not an object containing an array
-        json.decodeFromString<List<WordResult>>(jsonText).map { it.word }
-    } catch (e: Exception) {
-        println("⚠️ Error fetching from relatedwords.org: ${e.message}")
-        emptyList()
-    }
+    } ?: emptyList()
 }
 
 /**
