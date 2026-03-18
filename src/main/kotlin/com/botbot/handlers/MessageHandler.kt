@@ -1,6 +1,7 @@
 package com.botbot.handlers
 
 import com.botbot.db.MessageDatabase
+import com.botbot.services.getWordForms
 import com.botbot.utils.createMessageLink
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
@@ -65,30 +66,34 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
 
         if (wordsInMessage.isEmpty()) return@coroutineScope
 
-        // Find all active subscriptions keywords
-        val subscribers = database.findSubscribersForKeywords(wordsInMessage)
+        // Find all unique keywords users are subscribed to
+        // Note: For large systems, this should be optimized. For this bot, it's efficient enough.
+        val allSubscribedKeywords = database.getAllSubscribedKeywords()
+        
+        for (keyword in allSubscribedKeywords) {
+            // Get cached word forms for this keyword, or fetch them if missing
+            var cachedForms = database.getWordForms(keyword)
+            if (cachedForms == null) {
+                println("[Cache] Missing word forms for '$keyword'. Fetching...")
+                cachedForms = getWordForms(keyword)
+                database.saveWordForms(keyword, cachedForms)
+            }
 
-        // 3. Dispatch notifications
-        if (subscribers.isNotEmpty()) {
-            subscribers.forEach { (keyword, userIds) ->
+            // Check if any word in the message matches any form of the keyword
+            if (wordsInMessage.any { it in cachedForms }) {
+                val subscribers = database.findSubscribersForKeywords(setOf(keyword))
+                val userIds = subscribers[keyword] ?: continue
+
                 userIds.forEach { subscriberId ->
                     // Skip if the subscriber is the one who sent the message
-                    if (subscriberId == userId) {
-                        val skipLog = "[Notification] Skipping notification for user $subscriberId (sender is the subscriber) for keyword '$keyword'"
-                        println(skipLog)
-                        File("full_activity.log").appendText("$skipLog\n")
-                        return@forEach
-                    }
+                    if (subscriberId == userId) return@forEach
 
                     launch {
                         try {
-                            // Find the message for the link (using search to get the SearchResult object)
                             val searchResult = database.searchMessages(listOf(keyword), listOf(chatId), limit = 1).firstOrNull()
                             val messageLink = searchResult?.let { createMessageLink(it) } ?: ""
                             
                             val notificationText = "🔔 Word *'$keyword'* mentioned in *${chatTitle ?: "a group"}*:\n\n\"$text\"\n\n[Go to message]($messageLink)"
-                            
-                            println("[Notification] Sending PM to $subscriberId for keyword '$keyword'...")
                             
                             bot.sendMessage(
                                 chatId = ChatId.fromId(subscriberId),
@@ -96,11 +101,7 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
                                 parseMode = ParseMode.MARKDOWN,
                                 disableWebPagePreview = true
                             ).fold(
-                                { 
-                                    val successLog = "[Notification Success] PM sent to $subscriberId for keyword '$keyword'"
-                                    println(successLog)
-                                    File("full_activity.log").appendText("$successLog\n")
-                                },
+                                { /* Success */ },
                                 {
                                     val errorLog = "[Notification Error] Failed to send PM to $subscriberId: $it"
                                     println(errorLog)
@@ -108,11 +109,9 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
                                 }
                             )
                         } catch (e: Exception) {
-                            val crashLog = "[Notification Fatal] Unexpected error during notification for $subscriberId: ${e.message}"
-                            println(crashLog)
-                            File("full_activity.log").appendText("$crashLog\n")
+                            println("[Notification Fatal] Error notifying $subscriberId: ${e.message}")
                         }
-                        delay(500) // Small delay to prevent rate-limiting
+                        delay(500)
                     }
                 }
             }

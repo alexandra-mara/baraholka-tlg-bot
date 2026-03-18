@@ -84,6 +84,23 @@ class MessageDatabase {
         }
     }
 
+    fun getAllSubscribedKeywords(): Set<String> {
+        val sql = "SELECT DISTINCT keyword FROM subscriptions"
+        val keywords = mutableSetOf<String>()
+        try {
+            connection.createStatement().use { stmt ->
+                stmt.executeQuery(sql).use { rs ->
+                    while (rs.next()) {
+                        keywords.add(rs.getString("keyword"))
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error getting all subscribed keywords: ${e.message}")
+        }
+        return keywords
+    }
+
     fun getWordForms(baseWord: String): List<String>? {
         val sql = "SELECT forms FROM word_forms WHERE base_word = ?"
         try {
