@@ -59,6 +59,14 @@ class MessageDatabase {
             )
         """
 
+        val createWordFormsTableSQL = """
+            CREATE TABLE IF NOT EXISTS word_forms (
+                base_word TEXT PRIMARY KEY,
+                forms TEXT NOT NULL,
+                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+
         val createIndexSQL = """
             CREATE INDEX IF NOT EXISTS idx_search 
             ON messages(message_text, timestamp)
@@ -70,8 +78,39 @@ class MessageDatabase {
             stmt.execute(createMessagesTableSQL)
             stmt.execute(createUsersTableSQL)
             stmt.execute(createSubscriptionsTableSQL)
+            stmt.execute(createWordFormsTableSQL)
             stmt.execute(createIndexSQL)
             stmt.execute(createSubscriptionIndexSQL)
+        }
+    }
+
+    fun getWordForms(baseWord: String): List<String>? {
+        val sql = "SELECT forms FROM word_forms WHERE base_word = ?"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setString(1, baseWord.lowercase())
+                pstmt.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        return rs.getString("forms").split(",")
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error getting word forms: ${e.message}")
+        }
+        return null
+    }
+
+    fun saveWordForms(baseWord: String, forms: List<String>) {
+        val sql = "INSERT OR REPLACE INTO word_forms (base_word, forms, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)"
+        try {
+            connection.prepareStatement(sql).use { pstmt ->
+                pstmt.setString(1, baseWord.lowercase())
+                pstmt.setString(2, forms.joinToString(","))
+                pstmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            println("⚠️ Error saving word forms: ${e.message}")
         }
     }
 
@@ -250,6 +289,7 @@ class MessageDatabase {
                 ROW_NUMBER() OVER(PARTITION BY message_text ORDER BY timestamp DESC) as rn
             FROM messages m
             WHERE ($wordFormsWhere)
+            AND message_text NOT LIKE '/%'
             AND timestamp >= ?
             $chatIdsWhere
         )

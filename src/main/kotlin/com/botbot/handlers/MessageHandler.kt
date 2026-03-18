@@ -38,8 +38,8 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
 
     // --- Main Logic: Save Message & Dispatch Notifications ---
     if (chatId in monitoredChats) {
-        // 1. Save the message to the database
-        if (text.isNotBlank()) {
+        // 1. Save the message to the database (if it's not a command)
+        if (text.isNotBlank() && !text.startsWith("/")) {
             database.saveMessage(
                 chatId = chatId,
                 chatTitle = chatTitle,
@@ -55,6 +55,9 @@ suspend fun handleMessage(bot: Bot, message: Message, database: MessageDatabase,
         }
 
         // 2. Extract words from message and check against subscriptions
+        // We also skip notifications for commands to avoid noise
+        if (text.startsWith("/")) return@coroutineScope
+
         val wordsInMessage = text.split(Regex("\\s+"))
             .map { it.lowercase().filter { char -> char.isLetterOrDigit() } }
             .filter { it.length > 2 }
