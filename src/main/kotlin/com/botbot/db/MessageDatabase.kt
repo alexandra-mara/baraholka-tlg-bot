@@ -157,16 +157,21 @@ class MessageDatabase {
         return subscribers
     }
 
-    fun addSubscription(userId: Long, keyword: String) {
+    /**
+     * Adds a subscription for a user.
+     * Returns true if a new subscription was added, false if it already existed.
+     */
+    fun addSubscription(userId: Long, keyword: String): Boolean {
         val sql = "INSERT OR IGNORE INTO subscriptions (user_id, keyword) VALUES (?, ?)"
-        try {
+        return try {
             connection.prepareStatement(sql).use { pstmt ->
                 pstmt.setLong(1, userId)
                 pstmt.setString(2, keyword.lowercase())
-                pstmt.executeUpdate()
+                pstmt.executeUpdate() > 0
             }
         } catch (e: SQLException) {
             println("⚠️ Error adding subscription: ${e.message}")
+            false
         }
     }
 

@@ -5,8 +5,10 @@ import com.botbot.services.getWordForms
 import com.botbot.utils.createMessageLink
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import java.io.File
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -45,8 +47,14 @@ suspend fun handleSearchCallback(bot: Bot, message: Message, args: List<String>,
 
     // 3. Prepare the results message
     val userChatId = ChatId.fromId(user.id)
-    val responseText = if (results.isEmpty()) {
-        "😕 Nothing found for \"$query\" in the last week."
+    val responseText: String
+    val keyboard: InlineKeyboardMarkup?
+
+    if (results.isEmpty()) {
+        responseText = "😕 Nothing found for \"$query\" in the last week."
+        keyboard = InlineKeyboardMarkup.create(
+            listOf(listOf(InlineKeyboardButton.CallbackData("🔔 Subscribe to \"$query\"", "subscribe_query:$query")))
+        )
     } else {
         val response = results.joinToString("\n\n") { result ->
             val localTimestamp = result.timestamp.atZone(ZoneId.systemDefault())
@@ -60,24 +68,25 @@ suspend fun handleSearchCallback(bot: Bot, message: Message, args: List<String>,
             [Go to message]($link)
             """.trimIndent()
         }
-        "*Found ${results.size} results for \"$query\":*\n\n$response"
+        responseText = "*Found ${results.size} results for \"$query\":*\n\n$response"
+        keyboard = InlineKeyboardMarkup.create(
+            listOf(listOf(InlineKeyboardButton.CallbackData("🔔 Subscribe to \"$query\"", "subscribe_query:$query")))
+        )
     }
 
-    // 4. Send the results and handle any errors using the correct `fold` method
+    // 4. Send the results
     bot.sendMessage(
         chatId = userChatId,
         text = responseText,
-        parseMode = ParseMode.MARKDOWN
+        parseMode = ParseMode.MARKDOWN,
+        replyMarkup = keyboard
     ).fold({
-        // Success! Do nothing.
+        // Success!
     }, {
-        // Failure! Log the error and notify the user in the original chat.
         val errorMessage = "⚠️ @${user.username ?: user.firstName}, I couldn't send you a private message. Please make sure you have started a chat with me first!"
         val log = "[Callback Error] Failed to send PM to ${user.id}: $it"
-        
         println(log)
         File("full_activity.log").appendText("$log\n")
-
         bot.sendMessage(chatId = ChatId.fromId(message.chat.id), text = errorMessage)
     })
 }

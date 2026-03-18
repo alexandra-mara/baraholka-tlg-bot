@@ -3,18 +3,33 @@ package com.botbot.handlers
 import com.botbot.db.MessageDatabase
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.Message
-import java.io.File
+import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 
 suspend fun handleUnsubscribeAll(bot: Bot, message: Message, database: MessageDatabase) {
     val user = message.from ?: return
+    val count = database.getSubscriptionsForUser(user.id).size
 
-    database.removeAllSubscriptions(user.id)
+    if (count == 0) {
+        bot.sendMessage(chatId = ChatId.fromId(message.chat.id), text = "You have no active subscriptions to remove.")
+        return
+    }
 
-    // Log the action
-    val logMessage = "[Subscription] User ${user.firstName} (${user.id}) unsubscribed from ALL keywords"
-    println(logMessage)
-    File("full_activity.log").appendText("$logMessage\n")
+    val keyboard = InlineKeyboardMarkup.create(
+        listOf(
+            listOf(
+                InlineKeyboardButton.CallbackData("✅ Yes, remove all $count", "confirm_unsub_all"),
+                InlineKeyboardButton.CallbackData("❌ Cancel", "cancel_unsub_all")
+            )
+        )
+    )
 
-    bot.sendMessage(chatId = ChatId.fromId(message.chat.id), text = "✅ You have been unsubscribed from all keywords.")
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = "⚠️ *Are you sure?*\nThis will permanently delete all *$count* of your keyword subscriptions.",
+        parseMode = ParseMode.MARKDOWN,
+        replyMarkup = keyboard
+    )
 }
